@@ -1,0 +1,41 @@
+## Build ANTs
+FROM nvidia/cuda:9.1-runtime-ubuntu16.04 as antsbuild
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+                    software-properties-common \
+                    build-essential \
+                    apt-transport-https \
+                    ca-certificates \
+                    gnupg \
+                    software-properties-common \
+                    wget \
+                    ninja-build \
+                    git \
+                    zlib1g-dev
+
+RUN wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc 2>/dev/null \
+    | apt-key add - \
+  && apt-add-repository -y 'deb https://apt.kitware.com/ubuntu/ xenial main' \
+  && apt-get update \
+  && apt-get -y install cmake git
+
+ARG ANTS_SHA=e00e8164d7a92f048e5d06e388a15c1ee8e889c4
+RUN mkdir -p /tmp/ants/build \
+    && cd /tmp \
+    && git clone https://github.com/ANTsX/ANTs.git \
+    && mv ANTs /tmp/ants/source \
+    && cd /tmp/ants/source \
+    && git checkout ${ANTS_SHA} \
+    && mkdir -p /tmp/ants/build \
+    && cd /tmp/ants/build \
+    && git config --global url."https://".insteadOf git:// \
+    && cmake \
+      -GNinja \
+      -DBUILD_TESTING=OFF \
+      -DBUILD_SHARED_LIBS=ON \
+      -DCMAKE_INSTALL_PREFIX=/opt/ants \
+      /tmp/ants/source \
+    && cmake --build . --parallel \
+    && cd ANTS-build \
+    && cmake --install .
